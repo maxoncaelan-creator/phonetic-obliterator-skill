@@ -370,4 +370,4 @@ Each entry has:
 
 ---
 
-<!-- Built-in styles end here. Recorded styles are not added to this file: auto style writes them to ~/.claude/phonetic-obliterator/my-styles.md, which skill updates never touch. See "Where styles live" in SKILL.md. -->
+<!-- Built-in styles end here. Recorded styles are not added to this file: auto style writes them to a personal file (~/.agents/phonetic-obliterator/my-styles.md, or ~/.claude/phonetic-obliterator/my-styles.md if that already exists), which skill updates never touch. See "Where styles live" in SKILL.md. -->
