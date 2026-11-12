@@ -1,7 +1,10 @@
 ---
 name: phonetic-obliterator
 description: Cuts phonemes, keeps SEO. Locks top keywords via DataForSEO, then trims the rest by level (low 20%, medium 40%, high 60%), counted with CMU Pronouncing Dictionary, in one of 57 styles (e.g. clean, moody, pirate; see styles.md) or auto, which logs new ones. Too lossy? It drops a level and redoes it. Use to "phonetically obliterate" text, or on /phonetic-obliterator. Args — level (high), style (auto), place (US), text.
-argument-hint: "[low|medium|high] [auto|<style from styles.md>|<new style name>] [location] <text>"
+license: MIT
+compatibility: Needs an agent that can run Python 3 with the cmudict package (pip install cmudict). DataForSEO keyword locks are optional; they use a DataForSEO MCP tool or the bundled script with DATAFORSEO_USERNAME and DATAFORSEO_PASSWORD set.
+metadata:
+  argument-hint: "[low|medium|high] [auto|<style from styles.md>|<new style name>] [location] <text>"
 ---
 
 # Phonetic Obliterator
@@ -16,7 +19,9 @@ Shortens a text by **phonemes**, not words, while keeping the words searchers us
 
 The reduction applies only to phonemes **outside** the locked keyword phrases. Locked phrases are never changed, so the reduction across the whole text comes out a bit lower. Report both numbers.
 
-The counter is `scripts/phonemes.py` in this skill's folder (`.claude/skills/phonetic-obliterator/scripts/phonemes.py`). Use it for every count. Never estimate phonemes by hand.
+The counter is `scripts/phonemes.py` in this skill's folder (wherever this `SKILL.md` lives, e.g. `.claude/skills/`, `.agents/skills/` or `.gemini/skills/`). Use it for every count. Never estimate phonemes by hand. Run scripts by their full path, or from the skill's folder.
+
+**Python command:** commands below say `python3`. If that isn't found (common on Windows), use `python` (or `py -3`) for every command instead. If you can't run code at all, stop and say this skill needs code execution to count phonemes.
 
 ## Step 0: Setup
 
@@ -27,7 +32,7 @@ The counter is `scripts/phonemes.py` in this skill's folder (`.claude/skills/pho
    - **Location:** default United States (`location_code` 2840, `language_code` "en").
    - **Text:** the rest of the arguments, or what the user pasted. If no text is given, ask for it.
 3. Split off the parts that should not be counted or changed: headers (e.g. "🪰 DID YOU KNOW?"), sign-offs/bylines (e.g. a brand name at the end), emojis and hashtags. Keep them as they are and put them back at the end.
-4. Write the countable body to `original.txt` in the scratchpad directory.
+4. Write the countable body to `original.txt` in a scratch folder: your scratchpad if your agent has one, else a temp folder. Keep the user's project clean.
 
 ## Step 1: Phonetic transcription
 
@@ -41,14 +46,20 @@ Run `python3 phonemes.py count original.txt --ipa`. This prints every word with 
 
 Find out whether the user has a working DataForSEO connection before any keyword work:
 
-1. **Look for the tool.** Run ToolSearch with `select:mcp__DataForSEO__api_request`. If nothing is found, search for `dataforseo` too, since the tool may be under a plugin prefix or still connecting.
-2. **Test the account.** If the tool loads, call it with `method: "GET"`, `path: "/v3/appendix/user_data"`. This is a free account lookup. It passes only if the response has `status_code` 20000.
-3. **Decide:**
+Pick the first route that works, in this order. Use the same route for all of Step 2b.
+
+1. **Route A: a DataForSEO MCP tool.** If your tool list has a DataForSEO tool, use it.
+   - In Claude Code, tools may be deferred: run ToolSearch with `select:mcp__DataForSEO__api_request`. If nothing is found, search for `dataforseo` too, since the tool may be under a plugin prefix or still connecting.
+   - Other agents: look in your tool list for a name containing `dataforseo` (any case).
+   - **Test the account.** With a generic request tool (like `api_request`), call `method: "GET"`, `path: "/v3/appendix/user_data"`. This is a free account lookup. It passes only if the response has `status_code` 20000. If the server has only per-endpoint tools and no way to call that path, the test passes if a Step 2b call returns `status_code` 20000.
+2. **Route B: the bundled script.** If there's no MCP tool, or it fails, and the environment variables `DATAFORSEO_USERNAME` and `DATAFORSEO_PASSWORD` are set, run `python3 scripts/dataforseo.py check` (from the skill's folder). It's free and prints `"check":"PASS"` only on `status_code` 20000. Never print, echo or log the credentials; the script reads them itself.
+3. **Route C: none.** No tool, no env vars, or both routes failed.
+4. **Decide:**
    - **PASS:** continue with Step 2b.
-   - **FAIL:** skip Step 2b and **continue without keyword locks**. Failing means the tool wasn't found, the server needs sign-in or failed to connect, the call errored, or the `status_code` wasn't 20000.
+   - **FAIL (Route C):** skip Step 2b and **continue without keyword locks**. Failing means no tool was found and the script can't run (missing env vars, network error, bad credentials), the server needs sign-in or failed to connect, the call errored, or the `status_code` wasn't 20000.
      - Don't stop to ask, and don't make up search volumes.
      - Use no `--lock` flags in Steps 3 and 4, so the level's reduction applies to the whole text.
-     - In the output, say "DataForSEO check: not available (<reason>). No keywords were locked." Mention that connecting DataForSEO adds keyword locks on the next run.
+     - In the output, say "DataForSEO check: not available (<reason>). No keywords were locked." Mention that connecting DataForSEO (an MCP server, or the two env vars for the script) adds keyword locks on the next run.
      - If the user names phrases to keep anyway, lock those as user locks. Don't present them as SEO keywords.
 
 ### 2b. Keyword research (only if the check passed)
@@ -58,7 +69,10 @@ Find out whether the user has a working DataForSEO connection before any keyword
    - Question forms ("why do flies fly in circles").
    - Short head terms.
 2. **Get volumes.** POST `/v3/dataforseo_labs/google/keyword_overview/live` with `[{"keywords":[...], "location_code":..., "language_code":...}]`.
+   - Route B: `python3 scripts/dataforseo.py volumes "<kw 1>" "<kw 2>" ... --location-code <code> --language-code <lang>`. It prints JSON with volume, difficulty, CPC and intent per keyword, plus `no_data` for keywords with no data.
 3. **Optional expansion.** For the two strongest seed terms, POST `/v3/dataforseo_labs/google/keyword_suggestions/live` with `{"keyword": seed, ..., "limit": 20, "order_by": ["keyword_info.search_volume,desc"]}`. Score any new phrases.
+   - Route B: `python3 scripts/dataforseo.py suggestions "<seed>" --limit 20 --location-code <code> --language-code <lang>`.
+   - If a paid call fails mid-run, keep whatever data you already have, or fall back to no locks as in Step 2a.
 4. **Choose phrases to lock.** A keyword can only be locked if its wording **already appears in the original text**, as a phrase of consecutive words. Small changes in plural, articles or spacing are fine: the keyword "lesser house fly" matches the text "lesser houseflies". Lock the **text's wording**, not the keyword's.
    - Rank matches by search volume. Low keyword difficulty breaks ties.
    - Skip matches under about 30 searches a month unless nothing better matches.
@@ -98,7 +112,7 @@ If the result is FAIL, edit the draft and run the check again. Cut more when the
 
 A PASS only means the count is right. Before output, check that the meaning survived.
 
-1. **Read it cold.** Read the final draft as someone who has never seen the original, then compare it with `original.txt`. If you can spawn a subagent, give one the original, the final and the style name, and ask it for this check. A fresh reader catches what the writer can't. Otherwise do it yourself, judging the final first and the original second.
+1. **Read it cold.** Read the final draft as someone who has never seen the original, then compare it with `original.txt`. If your agent can spawn a subagent (Claude Code's Agent tool or similar), give one the original, the final and the style name, and ask it for this check. A fresh reader catches what the writer can't. Otherwise do it yourself, judging the final first and the original second.
 2. **Flag only lost meaning:**
    - a sentence or fragment a cold reader can't parse or would misread, e.g. an unclear "it", a missing verb, a bare command name that reads as a verb, or shorthand like "closer to time out loud"
    - a fact cut so that the remaining claim is unclear, misleading or wrong, e.g. "should never be the same" becoming "aren't the same", or "within three points" with no target left to refer to
@@ -124,7 +138,7 @@ Use this when the style is `auto`, or when the user names a style that isn't in 
 3. **Record it.** Append the new entry to the personal styles file (see "Where styles live").
    - Never edit or delete existing entries while recording.
    - Tell the user it was recorded, show the entry and give the file's full path.
-   - If the write fails, the folder can't be written (for example, a skill uploaded to the Claude apps). Don't stop. Show the full entry in a copy-ready block and tell the user to save it. They can paste it into a later run, or into `my-styles.md` on a machine where they use Claude Code.
+   - If the write fails, the folder can't be written (for example, a skill uploaded to the Claude apps). Don't stop. Show the full entry in a copy-ready block and tell the user to save it. They can paste it into a later run, or into `my-styles.md` on a machine where their agent can write files.
    - Recorded styles in a cloud session are lost when it ends. If the file is in a git repo, offer to commit it; otherwise say so once.
 4. Rewrite in the chosen or recorded style as in Step 4.
 
@@ -137,12 +151,14 @@ There are two style files. Read both every run; they use the same entry format.
 | File | What it holds | Changed by |
 |---|---|---|
 | `styles.md` in this skill's folder | The built-in styles | Skill updates only. Never record into it. |
-| `~/.claude/phonetic-obliterator/my-styles.md` | Your recorded styles | Auto style |
+| Personal file (below) | Your recorded styles | Auto style |
 
-- **Personal file:** it lives outside the skill folder, so updating or reinstalling the skill never wipes it. It works with or without git or GitHub.
-  - If it doesn't exist yet, create the folder and the file on the first recording. Start the file with the line `# My recorded styles`.
+- **Personal file:** it lives outside the skill folder, so updating or reinstalling the skill never wipes it. It works with or without git or GitHub, and with any agent.
+  - Read both of these if they exist: `~/.agents/phonetic-obliterator/my-styles.md` (the agent-neutral path) and `~/.claude/phonetic-obliterator/my-styles.md` (the old path, used by earlier versions).
+  - Record into the old path if that file already exists, so existing users keep one file. Otherwise record into `~/.agents/phonetic-obliterator/my-styles.md`.
+  - If neither exists yet, create the folder and the file on the first recording. Start the file with the line `# My recorded styles`.
   - If `~` can't be resolved or written, fall back to the copy-ready block in step 3.
-- **Name clashes:** if a name is in both files, the personal one wins.
+- **Name clashes:** if a name is in both the built-in and a personal file, the personal one wins. If it's in both personal files, the one in the file you record into wins.
 - **Pasted styles:** if the user pastes a style entry into the request, treat it as a style for that run.
 
 ## Step 5: Output
@@ -161,4 +177,4 @@ There are two style files. Read both every run; they use the same entry format.
    - **Exact-match tradeoffs:** places where the locked wording differs from the searched keyword, and switching would mean changing a lock.
    - **Location:** say which one was used.
    - **Pronunciation:** CMUdict uses one General American pronunciation per word, so other accents change counts slightly.
-6. Point to the IPA transcriptions of both versions (`count --ipa`) in the scratchpad. Give full absolute paths.
+6. Point to the IPA transcriptions of both versions (`count --ipa`) in the scratch folder. Give full absolute paths.
