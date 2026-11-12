@@ -1,6 +1,6 @@
 ---
 name: phonetic-obliterator
-description: Cuts phonemes, keeps SEO. Locks top keywords via DataForSEO, then trims the rest by level (low 20%, medium 40%, high 60%), counted with CMU Pronouncing Dictionary, in one of 57 styles (e.g. clean, moody, pirate; see styles.md) or auto, which logs new ones. Use to "phonetically obliterate" text, or on /phonetic-obliterator. Args — level (high), style (auto), place (US), text.
+description: Cuts phonemes, keeps SEO. Locks top keywords via DataForSEO, then trims the rest by level (low 20%, medium 40%, high 60%), counted with CMU Pronouncing Dictionary, in one of 57 styles (e.g. clean, moody, pirate; see styles.md) or auto, which logs new ones. Too lossy? It drops a level and redoes it. Use to "phonetically obliterate" text, or on /phonetic-obliterator. Args — level (high), style (auto), place (US), text.
 argument-hint: "[low|medium|high] [auto|<style from styles.md>|<new style name>] [location] <text>"
 ---
 
@@ -22,7 +22,7 @@ The counter is `scripts/phonemes.py` in this skill's folder (`.claude/skills/pho
 
 1. Run `python3 -c "import cmudict"`. If that fails, run `pip install cmudict`.
 2. Parse the arguments:
-   - **Level:** low, medium or high. The default is high.
+   - **Level:** low, medium or high. The default is high. The clarity check (Step 4b) may lower it by one level per try if the result is too lossy. If the user says `strict` (or "keep the level"), never lower it; just report the clarity problems.
    - **Style:** any style name in either style file (see "Where styles live"), or `auto`. The default is `auto`. Match loosely: "emo metal" means `emo-metal`, and "no style" or "plain" means `none`. If the user names a style that isn't in the registry, treat it as an auto-recorded style using the name they gave (see "Auto style").
    - **Location:** default United States (`location_code` 2840, `language_code` "en").
    - **Text:** the rest of the arguments, or what the user pasted. If no text is given, ask for it.
@@ -94,6 +94,21 @@ python3 phonemes.py check original.txt candidate.txt --level <level> --lock ... 
 
 If the result is FAIL, edit the draft and run the check again. Cut more when the reduction is under target; add words back when it is over. Repeat until it prints PASS (within ±3 points of target). Stop after 6 tries and report the closest version.
 
+## Step 4b: Clarity check (autofix for lossy cuts)
+
+A PASS only means the count is right. Before output, check that the meaning survived.
+
+1. **Read it cold.** Read the final draft as someone who has never seen the original, then compare it with `original.txt`. If you can spawn a subagent, give one the original, the final and the style name, and ask it for this check. A fresh reader catches what the writer can't. Otherwise do it yourself, judging the final first and the original second.
+2. **Flag only lost meaning:**
+   - a sentence or fragment a cold reader can't parse or would misread, e.g. an unclear "it", a missing verb, a bare command name that reads as a verb, or shorthand like "closer to time out loud"
+   - a fact cut so that the remaining claim is unclear, misleading or wrong, e.g. "should never be the same" becoming "aren't the same", or "within three points" with no target left to refer to
+   - a question or request that no longer makes sense
+   - grammar so clipped it reads as broken, not as the style
+3. **Don't flag:** terseness that the style asks for (deadpan, field-notes, haiku-ish and similar are meant to be clipped), lost flourishes or nuance, dropped filler, digits, or lists in place of prose.
+4. **If anything is flagged and the level is above low,** drop one level (high → medium → low). Rewrite from `original.txt`, not from the clipped draft. Run `target` and `check` at the new level, then do this clarity check again.
+5. **If it's already at low,** or the user said `strict`, don't lower the level. Restore the words needed to fix each flagged spot within the ±3 tolerance where possible. If a spot still can't be fixed, keep the closest version and list that spot in the output.
+6. **Keep the locks and the style.** The autofix never changes locked phrases or the style. It only changes how much is cut.
+
 ## Auto style
 
 Use this when the style is `auto`, or when the user names a style that isn't in the registry.
@@ -134,6 +149,7 @@ There are two style files. Read both every run; they use the same entry format.
 
 1. The final text, with header, emojis and sign-off put back. Mark locked phrases with 🔒 and bold **only** in the preview. Also give a clean, copy-ready version with no markers.
 2. The style used, saying whether you chose it automatically and whether it was newly recorded.
+   - The clarity check result: "clear at <level>", or "autofixed: <requested level> → <final level>" with each flagged phrase quoted and a one-line reason. When the level dropped, report the stats below at the final level and say so.
 3. Stats:
    - original phonemes = locked + unlocked
    - new phonemes = locked + unlocked
