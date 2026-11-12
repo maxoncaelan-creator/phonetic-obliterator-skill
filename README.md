@@ -12,6 +12,8 @@ A Claude Code skill that cuts phonemes but keeps SEO.
 | medium | 40% |
 | high | 60% |
 
+Cut too lossy? It reads it cold, drops a level and redoes it. Add `strict` to keep your level.
+
 Pick from 57 styles (`phonetic-obliterator/styles.md`). Auto fits your voice, or logs a new one to `~/.claude/phonetic-obliterator/my-styles.md`. Updates keep it. No git needed.
 
 ## Install
