@@ -12,7 +12,7 @@ A Claude Code skill that cuts phonemes but keeps SEO.
 | medium | 40% |
 | high | 60% |
 
-Pick from 57 styles (`phonetic-obliterator/styles.md`). Auto fits your voice, or logs a new one.
+Pick from 57 styles (`phonetic-obliterator/styles.md`). Auto fits your voice, or logs a new one to `~/.claude/phonetic-obliterator/my-styles.md`. Updates keep it. No git needed.
 
 ## Install
 
