@@ -3,8 +3,7 @@ name: phonetic-obliterator
 description: Cuts phonemes, keeps SEO. Locks top keywords via DataForSEO, then trims the rest by level (low 20%, medium 40%, high 60%), counted with CMU Pronouncing Dictionary, in one of 57 styles (e.g. clean, moody, pirate; see styles.md) or auto, which logs new ones. Too lossy? It drops a level and redoes it. Use to "phonetically obliterate" text, or on /phonetic-obliterator. Args — level (high), style (auto), place (US), text.
 license: MIT
 compatibility: Needs an agent that can run Python 3 with the cmudict package (pip install cmudict). DataForSEO keyword locks are optional; they use a DataForSEO MCP tool or the bundled script with DATAFORSEO_USERNAME and DATAFORSEO_PASSWORD set.
-metadata:
-  argument-hint: "[low|medium|high] [auto|<style from styles.md>|<new style name>] [location] <text>"
+argument-hint: "[low|medium|high] [auto|<style from styles.md>|<new style name>] [location] <text>"
 ---
 
 # Phonetic Obliterator
