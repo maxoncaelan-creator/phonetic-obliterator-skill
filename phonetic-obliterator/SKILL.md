@@ -23,7 +23,7 @@ The counter is `scripts/phonemes.py` in this skill's folder (`.claude/skills/pho
 1. Run `python3 -c "import cmudict"`. If that fails, run `pip install cmudict`.
 2. Parse the arguments:
    - **Level:** low, medium or high. The default is high.
-   - **Style:** any style name in `styles.md` (in this skill's folder), or `auto`. The default is `auto`. Match loosely: "emo metal" means `emo-metal`, and "no style" or "plain" means `none`. If the user names a style that isn't in the registry, treat it as an auto-recorded style using the name they gave (see "Auto style").
+   - **Style:** any style name in either style file (see "Where styles live"), or `auto`. The default is `auto`. Match loosely: "emo metal" means `emo-metal`, and "no style" or "plain" means `none`. If the user names a style that isn't in the registry, treat it as an auto-recorded style using the name they gave (see "Auto style").
    - **Location:** default United States (`location_code` 2840, `language_code` "en").
    - **Text:** the rest of the arguments, or what the user pasted. If no text is given, ask for it.
 3. Split off the parts that should not be counted or changed: headers (e.g. "🪰 DID YOU KNOW?"), sign-offs/bylines (e.g. a brand name at the end), emojis and hashtags. Keep them as they are and put them back at the end.
@@ -83,7 +83,7 @@ Rewrite the body to fit the budget:
 - **Facts:** keep the core facts and the main point. Drop filler, hedges and repeated ideas first.
 - **Cheap words:** prefer words with fewer phonemes ("seen" over "noticed", "spin" over "reversing"). Contractions help.
 - **Rhythm:** keep it readable and natural, never a word list.
-- **Style:** read the style's entry in `styles.md` and follow its Voice, Do and Avoid. Get the style from word choice, not added length; it has to fit the same budget. A style never overrides locks or facts.
+- **Style:** read the style's entry (from either style file) and follow its Voice, Do and Avoid. Get the style from word choice, not added length; it has to fit the same budget. A style never overrides locks or facts.
 - **Specific words the user asks to keep:** treat them as extra locks and add a `--lock` for each.
 
 Write the draft to `candidate.txt`, then run:
@@ -99,20 +99,36 @@ If the result is FAIL, edit the draft and run the check again. Cut more when the
 Use this when the style is `auto`, or when the user names a style that isn't in the registry.
 
 1. **Read the original's voice.** Look at its tone, audience, register, emoji use, sentence rhythm and signature phrases.
-2. **Match it.** Compare against every entry in `styles.md`, including auto-recorded ones.
+2. **Match it.** Compare against every entry in both style files (see "Where styles live").
    - If one fits cleanly (its Voice describes the text, and nothing in the text breaks its Avoid list), use it. Say "Auto style: <name>" and give a one-line reason.
    - If none fits cleanly, **determine the style** yourself:
      - Give it a short kebab-case name, e.g. `cosy-naturalist`, with a Voice, Do and Avoid that describe this text.
      - Add a Sample line from the rewritten text.
      - Add a `Recorded:` line with today's date and a few words on the source.
    - If the user named an unknown style, build the entry from their name and intent instead of from the text.
-3. **Record it.** Append the new entry under the `AUTO-RECORDED STYLES` marker at the bottom of `styles.md`.
+3. **Record it.** Append the new entry to the personal styles file (see "Where styles live").
    - Never edit or delete existing entries while recording.
-   - Tell the user it was recorded and show the entry.
-   - If the skill is in a git repo, offer to commit it. Recorded styles are lost when a cloud session ends unless committed.
+   - Tell the user it was recorded, show the entry and give the file's full path.
+   - If the write fails, the folder can't be written (for example, a skill uploaded to the Claude apps). Don't stop. Show the full entry in a copy-ready block and tell the user to save it. They can paste it into a later run, or into `my-styles.md` on a machine where they use Claude Code.
+   - Recorded styles in a cloud session are lost when it ends. If the file is in a git repo, offer to commit it; otherwise say so once.
 4. Rewrite in the chosen or recorded style as in Step 4.
 
 A recorded style can be used by name in later runs, e.g. `/phonetic-obliterator medium cosy-naturalist <text>`.
+
+## Where styles live
+
+There are two style files. Read both every run; they use the same entry format.
+
+| File | What it holds | Changed by |
+|---|---|---|
+| `styles.md` in this skill's folder | The built-in styles | Skill updates only. Never record into it. |
+| `~/.claude/phonetic-obliterator/my-styles.md` | Your recorded styles | Auto style |
+
+- **Personal file:** it lives outside the skill folder, so updating or reinstalling the skill never wipes it. It works with or without git or GitHub.
+  - If it doesn't exist yet, create the folder and the file on the first recording. Start the file with the line `# My recorded styles`.
+  - If `~` can't be resolved or written, fall back to the copy-ready block in step 3.
+- **Name clashes:** if a name is in both files, the personal one wins.
+- **Pasted styles:** if the user pastes a style entry into the request, treat it as a style for that run.
 
 ## Step 5: Output
 

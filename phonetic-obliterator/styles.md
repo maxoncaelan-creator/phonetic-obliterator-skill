@@ -370,4 +370,4 @@ Each entry has:
 
 ---
 
-<!-- AUTO-RECORDED STYLES: new styles that `auto` creates go below this line, using the same format plus a "Recorded:" line (date and a short note on the source text). -->
+<!-- Built-in styles end here. Recorded styles are not added to this file: auto style writes them to ~/.claude/phonetic-obliterator/my-styles.md, which skill updates never touch. See "Where styles live" in SKILL.md. -->
