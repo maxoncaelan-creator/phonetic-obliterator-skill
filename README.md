@@ -1,29 +1,28 @@
 # phonetic-obliterator
 
-A Claude Code skill for SEO-safe phoneme reduction.
+A Claude Code skill that cuts phonemes but keeps SEO.
 
-1. Transcribes a text phonetically with the CMU Pronouncing Dictionary.
-2. Finds the best search keywords already in the text, using DataForSEO.
-3. Locks those keyword phrases so they are never changed.
-4. Rewrites everything else to cut its phoneme count by a set level:
+1. It maps each word with the CMU Pronouncing Dictionary.
+2. It finds top keywords via DataForSEO and locks them.
+3. It cuts the rest by your level:
 
-| Level | Phoneme cut outside the locked keywords |
+| Level | Cut (unlocked phonemes) |
 |---|---|
 | low | 20% |
 | medium | 40% |
 | high | 60% |
 
-The rewrite can be in any of 57 styles (see `phonetic-obliterator/styles.md`). The default, `auto`, matches the text's own voice, and records a new style if none fits.
+Pick from 57 styles (`phonetic-obliterator/styles.md`). Auto fits your voice, or logs a new one.
 
 ## Install
 
-Copy the `phonetic-obliterator/` folder into `~/.claude/skills/` (every project) or `<project>/.claude/skills/` (one project). Then run:
+Copy the `phonetic-obliterator/` folder to your skills folder (`~/.claude/skills/` or `<project>/.claude/skills/`). Then run:
 
 ```
 pip install cmudict
 ```
 
-Keyword locking needs the DataForSEO MCP connector. The skill checks for it on every run. If DataForSEO is missing or not signed in, the skill continues without keyword locks, and the level applies to the whole text.
+Locks need DataForSEO. No DataForSEO? No locks; it cuts it all.
 
 ## Use
 
@@ -34,9 +33,13 @@ Keyword locking needs the DataForSEO MCP connector. The skill checks for it on e
 
 ## Counter script
 
-You can also run the phoneme counter on its own:
+Run the phoneme counter alone:
 
 ```
 python3 phonetic-obliterator/scripts/phonemes.py count text.txt --ipa
 python3 phonetic-obliterator/scripts/phonemes.py check original.txt new.txt --level medium --lock "lesser houseflies"
 ```
+
+## License
+
+[MIT](LICENSE)

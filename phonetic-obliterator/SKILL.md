@@ -1,6 +1,6 @@
 ---
 name: phonetic-obliterator
-description: SEO-safe phoneme reduction. Finds the best search keywords already in a text with DataForSEO, locks those phrases, then rewrites everything else to cut its phoneme count by a set level (low 20%, medium 40%, high 60%), checked with CMU Pronouncing Dictionary counts, in a chosen style from a registry of 57 (e.g. none, clean, corporate, moody, emo-metal, lusty, whimsy, witchy, noir, pirate, nature-documentary; see styles.md), or auto, which detects the text's style and records a new one if none fits. Use when the user asks to "phonetically obliterate" a text, cut its phonemes while keeping keywords, or invokes /phonetic-obliterator. Arguments are the level (default high), the style (default auto), an optional location (default United States), and the text.
+description: Cuts phonemes, keeps SEO. Locks top keywords via DataForSEO, then trims the rest by level (low 20%, medium 40%, high 60%), counted with CMU Pronouncing Dictionary, in one of 57 styles (e.g. clean, moody, pirate; see styles.md) or auto, which logs new ones. Use to "phonetically obliterate" text, or on /phonetic-obliterator. Args — level (high), style (auto), place (US), text.
 argument-hint: "[low|medium|high] [auto|<style from styles.md>|<new style name>] [location] <text>"
 ---
 
